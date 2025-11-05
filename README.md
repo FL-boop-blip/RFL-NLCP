@@ -24,75 +24,10 @@ Project Structure
 - `optimizer/`: Optimizers and SAM variants (`ESAM.py`, `DRegSAM.py`, `SAM.py`, etc.), with `fused_adan/`.
 - `run.sh`: Example script (defaults to `RFLNLCP` on CIFAR-10 non-IID).
 
-Key Modules and Functions
-1) Entry: `train.py`
-- CLI arguments (selected):
-  - Dataset: `--dataset {mnist, CIFAR10, CIFAR100, AG_News}`
-  - Model: `--model {mnist_2NN, ResNet18, ResNet18P, ResNet18_100, AG_News_NN, LeNet, ResNet18_sparsy, ResNet18_fusion, LeNet_fusion}`
-  - Partition: `--non-iid`, `--split-rule {Dirichlet, Pathological, iid}`, `--split-coef` (Dirichlet α or Pathological class count c)
-  - Participation: `--active-ratio`, `--total-client`
-  - Training: `--comm-rounds`, `--local-epochs`, `--batchsize`, `--weight-decay`, `--local-learning-rate`, `--global-learning-rate`, `--lr-decay`
-  - Others: `--seed`, `--cuda`, `--data-file`, `--out-file`, `--save-model`, `--use-RI`
-  - Method: `--method {FedAvg, FedDyn, SCAFFOLD, FedSpeed, FedSMOO, FedTOGA, FedVRA, RFLNLCP}`
-  - RFLNLCP: `--num_cluster` (clusters), `--beta3` (enlarge scale), `--lamb` (dual regularization), `--rho` (SAM radius)
-- Flow:
-  - Build `DatasetObject` (IID or non-IID partition)
-  - `model_func = lambda: client_model(args.model, classes)`
-  - Select server (e.g., `RFLNLCP`), instantiate, and call `server.train()`
-
-2) Base server: `server/server.py` → `Server`
-- `__init__`: Initialize global model, client parameter matrix, update matrix, logs, and output directories
-- `_activate_clients_`: Randomly sample active clients by `active_ratio`
-- `_validate_`/`_test_`: Evaluate loss/accuracy on test set and log divergence (E||wi − w||)
-- `train`: Standard FL loop (sample → broadcast → local train → aggregate → test → lr decay → timing → save)
-- Hooks for subclasses: `process_for_communication`, `global_update`, `postprocess`
-
-3) RFLNLCP server: `server/RFLNLCP.py`
-- State:
-  - `h_params_list`: per-client dual variable vectors
-  - `comm_vecs['Local_dual_correction']`: to clients, based on `h - w`
-- Key methods:
-  - `_cluster_clients_`: run one local training per client, collect `local_update_list`, reduce by PCA, cluster by KMeans, return labels and counts
-  - `_select_clients_`: sample clients, compute per-cluster `enlarge` factors to upweight minority clusters
-  - `process_for_communication`: send init params (optional RI: `w + beta*(w - w_i_prev)`) and dual correction
-  - `global_update`: `Averaged_model + mean(h)`
-  - `postprocess`: scale dual update by `d` (enlarge factor): `h_i += d * Δw_i`
-
-4) Clients: `client/client.py`, `client/rflnlcp.py`
-- Base `Client.train`: cross-entropy training, returns
-  - `local_update_list = last_params - Params_list`
-  - `local_model_param_list = last_params`
-- RFLNLCP client (`rflnlcp.py`):
-  - Optimizer: `ESAM` with SGD base optimizer
-  - Extra regularization: quadratic penalty on `w + (h - w)` with `0.5*lamb*||·||^2`
-  - Text support: `AG_News` with `lengths`
-
-5) Datasets and partitioning: `dataset.py`
-- `DatasetObject.set_data`:
-  - Download/load standard datasets (MNIST/CIFAR)
-  - Partitions:
-    - `iid`: equal and uniform
-    - `Dirichlet`: sample α-priors per client
-    - `Pathological`: c classes per client
-  - Outputs: `client_x/client_y` (+ `client_l` for text), `test_x/test_y`
-  - Visualization: `visualize_cifar10_distributions(...)`
-- Also includes synthetic data generation and dataset wrappers
-
-6) Models: `models.py`
-- `client_model(name, n_cls, ...)` builds:
-  - Vision: `LeNet`, `ResNet18`, `ResNet18_100`, fusion/sparse variants (GroupNorm replaces some BN)
-  - Text: `AG_News_NN` (average embedding + linear classifier)
-- `count_parameters(model, dtype)`: counts trainable params and memory (MB)
-
-7) Utilities: `utils.py`, `utils_models.py`
-- Parameters: `get_mdl_params`, `set_client_from_params`, `param_to_vector`, `get_params_list_with_shape`
-- Distillation: `DistillKL(T)`; distribution metrics: `get_distribution_difference(...)`
-- Sparse/custom layers: `SWAT*`, `SparsyFed*`, `SpectralNormHandler`, `SEBlock`, `ResidualBlock`, etc.
 
 Environment and Dependencies
 - Python ≥ 3.8; CUDA-enabled PyTorch recommended.
-- Install dependencies:
-  - `pip install -r requirements.txt`
+- See `requirements.txt` for a consolidated list. Key packages: `torch`, `torchvision`, `numpy`, `scikit-learn`, `scipy`, `tqdm`, `matplotlib`, `seaborn`, `Pillow`, `thop`.
 
 Data Preparation
 - MNIST/CIFAR are auto-downloaded to `./Data/Raw`.
@@ -106,7 +41,7 @@ Quick Start
 - Or use the script: `bash run.sh` (defaults to RFLNLCP).
 
 Parameters (selected)
-- Data: `--dataset {mnist,CIFAR10,CIFAR100,AG_News}`, `--data-file ./`, `--out-file out/`
+- Data: `--dataset {mnist,CIFAR10,CIFAR100}`, `--data-file ./`, `--out-file out/`
 - Partition: `--non-iid`, `--split-rule {Dirichlet, Pathological}`, `--split-coef 0.6`
 - Clients: `--total-client 100`, `--active-ratio 0.1`
 - Training: `--comm-rounds 1000`, `--local-epochs 5`, `--batchsize 50`
@@ -124,6 +59,5 @@ Outputs and Logs
   - `summary.txt`: rounds, avg time, best accuracy and round
 
 Notes
-- For `AG_News`, ensure the loader (`AG_News.py`) and dataset directory exist.
 - Default loss is cross-entropy; `_validate_` adds an L2 term with `weight_decay` for stability.
 - GPU is recommended; CPU fallback is supported.
