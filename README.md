@@ -31,7 +31,6 @@ Environment and Dependencies
 
 Data Preparation
 - MNIST/CIFAR are auto-downloaded to `./Data/Raw`.
-- AG_News: place the official CSV under `./Data/Raw/ag_news_csv` and ensure an `AG_News` loader is available (code imports `from AG_News import *`).
 
 Quick Start
 - Example 1 (RFLNLCP, CIFAR-10, Dirichlet non-IID, α=0.6):
