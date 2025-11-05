@@ -8,21 +8,6 @@ Overview
   - In subsequent rounds, client sampling is adjusted with per-cluster enlarge factors to upweight underrepresented clusters, improving global generalization.
   - Clients use ESAM for robust local optimization; the server maintains dual variables h and performs a dual-corrected global update (akin to FedDyn/FedSMOO).
 
-Project Structure
-- `train.py`: Entry point. Parses CLI args, builds dataset partitions and model, selects server algorithm, and runs training/evaluation.
-- `server/`: Server-side implementations.
-  - `server/server.py`: Base `Server` class with the main FL loop, client activation, evaluation, logging and saving.
-  - `server/RFLNLCP.py`: RFLNLCP server with client clustering, cluster-aware sampling, and dual-corrected aggregation.
-  - Other algorithms: `FedAvg.py`, `FedDyn.py`, `SCAFFOLD.py`, `FedSpeed.py`, `FedSMOO.py`, `FedTOGA.py`, `FedVRA.py`.
-- `client/`: Client-side implementations.
-  - `client/client.py`: Base `Client` with local training and returning local updates/model params.
-  - Algorithm-specific clients: `fedavg.py`, `feddyn.py`, `fedsmoo.py`, `rflnlcp.py`.
-- `dataset.py`: Dataset preparation and partitioning (supports `mnist`, `CIFAR10`, `CIFAR100`, `AG_News`; partitions: `iid`, `Dirichlet`, `Pathological`).
-- `models.py`: Model zoo (e.g., `LeNet`, `ResNet18` with GroupNorm, `ResNet18_100`, `AG_News_NN`, fusion/sparse variants).
-- `utils.py`: Utilities (parameter vectorization/loading, distillation KL, distribution metrics, pruning target collection, etc.).
-- `utils_models.py`: Custom layers/ops (SWAT/SparsyFed series, spectral norm handler, SE/Res blocks, etc.).
-- `optimizer/`: Optimizers and SAM variants (`ESAM.py`, `DRegSAM.py`, `SAM.py`, etc.), with `fused_adan/`.
-- `run.sh`: Example script (defaults to `RFLNLCP` on CIFAR-10 non-IID).
 
 
 Environment and Dependencies
